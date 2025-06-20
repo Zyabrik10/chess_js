@@ -1,0 +1,1 @@
+body{margin:0;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh}#chess{width:500px;height:500px;outline:1px solid black}#chooseFigureCanvas{outline:1px solid black}.modal{position:absolute;top:0;left:0;opacity:0;transition:opacity .1s ease;pointer-events:none}.modal.active{opacity:1;pointer-events:all}
