@@ -29,8 +29,8 @@ export function drawFigure(ctx, x, y, figure, chessFiguresImage, size) {
   if (!figure) return;
   ctx.drawImage(
     chessFiguresImage,
-    figure <= 6 ? (figure - 1) * 60 : (figure - 1 - 6) * 60,
-    figure <= 6 ? 0 : 60,
+    (Math.abs(figure) - 1) * 60,
+    figure > 0 ? 0 : 60,
     60,
     60,
     x,
@@ -49,7 +49,13 @@ export function drawSquare(ctx, x, y, size, color, stroke = false) {
   ctx.closePath();
 }
 
-export function drawChooseModal(playerTurn, ctx, chessFiguresImage, cellSize, map) {
+export function drawChooseModal(
+  playerTurn,
+  ctx,
+  chessFiguresImage,
+  cellSize,
+  map
+) {
   for (let i = 0; i < map.length; i++) {
     drawSquare(
       ctx,
@@ -62,7 +68,7 @@ export function drawChooseModal(playerTurn, ctx, chessFiguresImage, cellSize, ma
       ctx,
       i * cellSize,
       0,
-      playerTurn === 0 ? map[i] + 6 : map[i],
+      playerTurn === 0 ? -map[i] : map[i],
       chessFiguresImage,
       cellSize
     );

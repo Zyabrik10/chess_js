@@ -22,14 +22,14 @@ export function loopAndDo(_2dArray, func) {
 export function isFigureCorrectToPlayer(figure, playerTurn) {
   return (
     figure !== 0 &&
-    ((playerTurn === 0 && figure > 6) || (playerTurn === 1 && figure <= 6))
+    ((playerTurn === 0 && figure < 0) || (playerTurn === 1 && figure > 0))
   );
 }
 
 export function isFigureEnemyToPlayer(figure, playerTurn) {
   return (
     figure !== 0 &&
-    ((playerTurn === 0 && figure <= 6) || (playerTurn === 1 && figure > 6))
+    ((playerTurn === 0 && figure > 0) || (playerTurn === 1 && figure < 0))
   );
 }
 
@@ -42,20 +42,20 @@ export function resetBuffInfo(vars) {
   vars.actionMap = generateEmptyDesc();
 }
 
-function getFigure(name, turn) {
+export function getFigure(name, turn) {
   switch (name) {
     case "p":
-      return [12, 6][turn];
+      return [-6, 6][turn];
     case "b":
-      return [11, 5][turn];
+      return [-5, 5][turn];
     case "kn":
-      return [10, 4][turn];
+      return [-4, 4][turn];
     case "r":
-      return [9, 3][turn];
+      return [-3, 3][turn];
     case "k":
-      return [8, 2][turn];
+      return [-2, 2][turn];
     case "q":
-      return [7, 1][turn];
+      return [-1, 1][turn];
   }
 }
 
@@ -89,7 +89,6 @@ export function generateEmptyDesc() {
   return new Array(8).fill(0).map(() => new Array(8).fill(0));
 }
 
-
 export function checkIfDefends(coor, actionMap, defenders) {
   let isInDefenders = false;
   let coors = [];
@@ -98,7 +97,6 @@ export function checkIfDefends(coor, actionMap, defenders) {
   for (const df of defenders) {
     const [x, y] = df[0];
 
-    
     if (x === coor[0] && y === coor[1]) {
       dfCoor = df[1];
       isInDefenders = true;

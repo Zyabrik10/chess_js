@@ -1,6 +1,7 @@
 import {
   areCoorCorrect,
   checkIfDefends,
+  getFigure,
   getPlayerTurnDirection,
   isFigureCorrectToPlayer,
   isFigureEnemyToPlayer,
@@ -13,24 +14,18 @@ export function fillActionMap(
   vars,
   ignoreObstacles = false
 ) {
-  switch (figure) {
+  switch (Math.abs(figure)) {
     case 6:
-    case 12:
       return fillPawn([x, y], actionMap, vars);
     case 5:
-    case 11:
       return fillBishop([x, y], actionMap, vars, ignoreObstacles);
     case 4:
-    case 10:
       return fillKnight([x, y], actionMap, vars);
     case 3:
-    case 9:
       return fillRook([x, y], actionMap, vars, ignoreObstacles);
     case 2:
-    case 8:
       return fillKing([x, y], actionMap, vars);
     case 1:
-    case 7:
       return fillQueen([x, y], actionMap, vars, ignoreObstacles);
   }
 }
@@ -75,7 +70,7 @@ export function fillPawn(coor, actionMap, vars) {
 
     return coors;
   }
-  
+
   if (vars.map[yF1][xF1] === 0) {
     // one time forward
     actionMap[yF1][xF1] = 1;
@@ -221,7 +216,7 @@ export function fillKing(coor, actionMap, vars) {
     if (!areCoorCorrect(kingX, kingY)) return;
     if (
       isFigureCorrectToPlayer(vars.map[kingY][kingX], vars.playerTurn) ||
-      vars.gipAttackMap[kingY][kingX]
+      vars.hypAttackMap[kingY][kingX]
     ) {
       return;
     }
@@ -236,8 +231,8 @@ export function fillKing(coor, actionMap, vars) {
 
   if (vars.hasPlayerKingsMoved[vars.playerTurn] || allRookMove) return;
 
-  function checkRoquer([kingX, kingY], [rookX, rookY]) {
-    if (kingX === 4 && kingY === 7) {
+  function checkRoquer([kingX, kingY], rookY) {
+    if ((kingX === 4 && kingY === 7) || (kingX === 4 && kingY === 0)) {
       function isPathClear(n, dir) {
         for (let i = 0; i < n - 1; i++) {
           if (vars.map[kingY][kingX + (i + 1) * dir] !== 0) return false;
@@ -247,26 +242,26 @@ export function fillKing(coor, actionMap, vars) {
       }
 
       if (
-        vars.map[rookY][rookX] === 9 &&
+        vars.map[rookY][0] === getFigure("r", vars.playerTurn) &&
         !vars.hasPlayerRooksMoved[vars.playerTurn][0] &&
-        isPathClear(Math.abs(kingX - rookX), -1)
+        isPathClear(Math.abs(kingX), -1)
       ) {
-        actionMap[rookY][rookX] = 1;
+        actionMap[rookY][0] = 1;
         vars.isRoquerAllowed = true;
       }
 
       if (
-        vars.map[rookY][rookX + 7] === 9 &&
+        vars.map[rookY][7] === getFigure("r", vars.playerTurn) &&
         !vars.hasPlayerRooksMoved[vars.playerTurn][1] &&
-        isPathClear(Math.abs(kingX - (rookX + 7)), 1)
+        isPathClear(Math.abs(kingX - 7), 1)
       ) {
-        actionMap[rookY][rookX + 7] = 1;
+        actionMap[rookY][7] = 1;
         vars.isRoquerAllowed = true;
       }
     }
   }
 
-  checkRoquer(coor, [0, !vars.playerTurn ? 7 : 0]);
+  checkRoquer(coor, !vars.playerTurn ? 7 : 0);
 
   return coors;
 }

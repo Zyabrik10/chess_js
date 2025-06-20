@@ -9,6 +9,7 @@ import {
   areCoorCorrect,
   getShared,
   generateEmptyDesc,
+  isFigureEnemyToPlayer,
 } from "./utils";
 import { vars } from "./vars";
 
@@ -22,16 +23,11 @@ function init() {
 
 function doWhenImageIsLoaded() {
   function setKingsCoor() {
-    const wereKings = [false, false];
+    let king = 0;
     loopAndDo(vars.map, (j, i) => {
-      if (wereKings.every((e) => e === true)) return true;
-      if (vars.map[i][j] === 2 && !wereKings[1]) {
-        vars.kingsCoor[1] = [j, i, 2];
-        wereKings[1] = true;
-      }
-      if (vars.map[i][j] === 8 && !wereKings[0]) {
-        vars.kingsCoor[0] = [j, i, 8];
-        wereKings[0] = true;
+      if (king === 2) return true;
+      if (Math.abs(vars.map[i][j]) === 2) {
+        vars.kingsCoor[king++] = [j, i, vars.map[i][j]];
       }
     });
   }
@@ -83,7 +79,7 @@ function doWhenClickOnModal({ offsetX }) {
   vars.modal.classList.remove("active");
 
   vars.map[vars.lastMoveCoor[1]][vars.lastMoveCoor[0]] =
-    vars.playerTurn === 0 ? vars.map2[x] : vars.map2[x] + 6;
+    vars.playerTurn === 0 ? vars.map2[x] : -vars.map2[x];
 
   update(vars);
 }
@@ -102,9 +98,14 @@ function doWhenClick({ offsetX: x, offsetY: y }) {
     return;
   }
 
-  if (vars.chosenFigure && vars.actionMap[by][bx]) {
+  if (
+    vars.chosenFigure &&
+    vars.actionMap[by][bx] &&
+    validateMove(vars, [bx, by])
+  ) {
     makeAMove(vars, [bx, by]);
-    vars.lastMoveCoor = [bx, by];
+    resetBuffInfo(vars);
+    vars.playerTurn = +!vars.playerTurn;
     return;
   }
 
@@ -112,16 +113,27 @@ function doWhenClick({ offsetX: x, offsetY: y }) {
     vars.chosenFigure = [bx, by, figure];
     vars.actionMap = generateEmptyDesc();
 
-    fillActionMap(vars.chosenFigure, vars.actionMap, vars);
+    const coors = fillActionMap(vars.chosenFigure, vars.actionMap, vars);
+    updateActionMapForKingDefend(
+      vars.chosenFigure,
+      vars.actionMap,
+      coors,
+      vars
+    );
     return;
   }
 
   resetBuffInfo(vars);
 }
 
-function makeAMove(vars, newCoor) {
-  const [fx, fy, figure] = vars.chosenFigure;
+function validateMove(vars, newCoor) {
+  const [fx, _, figure] = vars.chosenFigure;
   const [newX, newY] = newCoor;
+
+  function validateRook() {
+    if (fx < 4) vars.hasPlayerRooksMoved[vars.playerTurn][0] = true;
+    if (fx > 4) vars.hasPlayerRooksMoved[vars.playerTurn][1] = true;
+  }
 
   // rook
   if (
@@ -152,7 +164,6 @@ function makeAMove(vars, newCoor) {
     );
   }
 
-  // king
   if (isFigureTheSame("k", vars.playerTurn, figure)) {
     vars.hasPlayerKingsMoved[vars.playerTurn] = true;
 
@@ -177,160 +188,203 @@ function makeAMove(vars, newCoor) {
       vars.isRoquerAllowed = false;
 
       validateRook();
-    } else {
-      move();
+      vars.playerTurn = +!vars.playerTurn;
+      vars.lastMoveCoor = [newKingX, kingY, kingFigure];
+      return false;
     }
-  } else {
-    // else figures
-    move();
   }
 
-  function move() {
-    vars.map[newY][newX] = figure;
-    vars.map[fy][fx] = 0;
-    vars.defenders = [];
-    checkIfKingsHaveCheck(vars);
-  }
-
-  function validateRook() {
-    if (fx < 4) vars.hasPlayerRooksMoved[vars.playerTurn][0] = true;
-    if (fx > 4) vars.hasPlayerRooksMoved[vars.playerTurn][1] = true;
-  }
-
-  resetBuffInfo(vars);
-  vars.playerTurn = +!vars.playerTurn;
+  return true;
 }
 
-function checkIfKingsHaveCheck(vars) {
-  const enemyTurn = +!vars.playerTurn;
-  const [enemyKingX, enemyKingY] = vars.kingsCoor[enemyTurn];
-  if (enemyKingX === null || enemyKingY === null) return;
+function makeAMove(vars, newCoor) {
+  const [fx, fy, figure] = vars.chosenFigure;
+  const [newX, newY] = newCoor;
 
-  vars.gipAttackMap = generateEmptyDesc();
-  let attackersMap = generateEmptyDesc();
+  vars.map[newY][newX] = figure;
+  vars.map[fy][fx] = 0;
+  vars.defenders = [];
+  vars.lastMoveCoor = [newX, newY, figure];
+  checkIfKingHasCheckAndMate(vars);
+}
 
-  let attacker = null;
+function hasKingCheck([kingX, kingY], vars) {
+  const [lastX, lastY, lastF] = vars.lastMoveCoor;
+  const attF = [lastX, lastY, lastF];
 
-  loopAndDo(vars.map, (x, y) => {
-    const figure = [x, y, vars.map[y][x]];
+  vars.hypAttackMap = generateEmptyDesc();
 
-    if (isFigureCorrectToPlayer(figure[2], vars.playerTurn)) {
-      fillActionMap(figure, vars.gipAttackMap, vars, true); // for king
-      const coors = fillActionMap(figure, attackersMap, vars);
-      if (attackersMap[enemyKingY][enemyKingX]) {
-        attacker = [coors, figure];
-        attackersMap = generateEmptyDesc();
-        return;
-      }
-    }
-  });
+  const coors = fillActionMap(attF, vars.hypAttackMap, vars, true);
 
-  vars.hasKingCheck[enemyTurn] = Boolean(
-    vars.gipAttackMap[enemyKingY][enemyKingX]
-  );
+  const hasKingCheck = vars.hypAttackMap[kingY][kingX] === 1;
 
-  vars.kingsFreeFields = 0;
-  kingGo((x, y) => {
-    const kingX = enemyKingX + x;
-    const kingY = enemyKingY + y;
+  vars.hasKingCheck[vars.playerTurn] = hasKingCheck;
+
+  if (hasKingCheck) vars.attackerInfo = [vars.lastMoveCoor, coors];
+
+  return hasKingCheck;
+}
+
+function fillHypMap(vars) {
+  loopAndDo(vars.map, (j, i) => {
+    const f = [j, i, vars.map[i][j]];
 
     if (
-      !areCoorCorrect(kingX, kingY) ||
-      isFigureCorrectToPlayer(vars.map[kingY][kingX], enemyTurn) ||
-      vars.gipAttackMap[kingY][kingX]
+      vars.map[i][j] === 0 ||
+      isFigureEnemyToPlayer(f[2], vars.playerTurn) ||
+      (i === vars.lastMoveCoor[1] && j === vars.lastMoveCoor[0])
+    )
+      return;
+
+    fillActionMap(f, vars.hypAttackMap, vars, true);
+  });
+}
+
+function countKingFreeFields([kingX, kingY], vars) {
+  vars.kingsFreeFields = 0;
+
+  kingGo((x, y) => {
+    const newKingX = kingX + x;
+    const newKingY = kingY + y;
+    if (
+      !areCoorCorrect(newKingX, newKingY) ||
+      isFigureCorrectToPlayer(vars.map[newKingY][newKingX], vars.playerTurn) ||
+      vars.hypAttackMap[newKingY][newKingX]
     )
       return;
     vars.kingsFreeFields++;
   });
+}
 
-  console.log(attacker);
+function checkIfKingHasCheckAndMate(vars) {
+  const [kingX, kingY] = vars.kingsCoor[vars.playerTurn];
+  if (kingX === null || kingY === null) return;
 
-  if (
-    vars.hasKingCheck[enemyTurn] &&
-    !canSomeOneProtectTheKing(vars, attacker, vars.kingsCoor[enemyTurn]) &&
-    vars.kingsFreeFields === 0
-  ) {
+  if (!hasKingCheck(vars.kingsCoor[vars.playerTurn], vars)) return;
+  fillHypMap(vars);
+  countKingFreeFields([kingX, kingY], vars);
+
+  const kingsDefenders = getKingDefenders(vars);
+
+  if (vars.kingsFreeFields === 0 && kingsDefenders.length === 0) {
     clearTimeout(vars.chessGameId);
-    console.log(vars.playerTurn + " wins");
+    console.log(["White player ", "Black player "][vars.playerTurn] + " wins");
   }
 }
 
-function canSomeOneProtectTheKing(
-  vars,
-  k,
-  [kingX, kingY, king]
-) {
-  if (k === null) return;
-  const [attackerCoors, attacker] = k;
-  const [attackerX, attackerY, attackerF] = attacker;
-  let defendersMap = generateEmptyDesc();
+function getKingDefenders(vars) {
+  const [attacker] = vars.attackerInfo;
+  const [kingX, kingY, king] = vars.kingsCoor[vars.playerTurn];
+  const [attX, attY, attF] = attacker;
+
   let mp = generateEmptyDesc();
   mp[kingY][kingX] = king;
-  mp[attackerY][attackerX] = attackerF;
+  mp[attY][attX] = attF;
 
   loopAndDo(vars.map, (j, i) => {
-    if (isFigureCorrectToPlayer(vars.map[i][j], +!vars.playerTurn)) {
+    if (isFigureEnemyToPlayer(vars.map[i][j], vars.playerTurn)) {
       mp[i][j] = vars.map[i][j];
     }
   });
 
-  const defenders = [];
-  vars.defenders = [];
+  vars.defenders = getDefenders(vars, mp);
+
+  return vars.defenders;
+}
+
+function getDefenders(vars, mp) {
+  const [[attackerX, attackerY, attackerF], attackerCoors] = vars.attackerInfo;
+  const [kingX, kingY, king] = vars.kingsCoor[vars.playerTurn];
+  let defenders = [];
 
   loopAndDo(vars.map, (x, y) => {
+    let defendersMap = generateEmptyDesc();
     const figure = [x, y, vars.map[y][x]];
 
     if (
-      isFigureCorrectToPlayer(figure[2], +!vars.playerTurn) &&
-      !isFigureTheSame("k", +!vars.playerTurn, figure[2])
-    ) {
-      const dfCoors = fillActionMap(figure, defendersMap, {
+      !isFigureCorrectToPlayer(figure[2], +!vars.playerTurn) ||
+      isFigureTheSame("k", +!vars.playerTurn, figure[2])
+    )
+      return;
+
+    const dfCoors = fillActionMap(figure, defendersMap, {
+      ...vars,
+      map: mp,
+      playerTurn: +!vars.playerTurn,
+    });
+
+    if (canDefenderEatAttacker([attackerX, attackerY], dfCoors)) {
+      defenders.push([figure, [attackerX, attackerY]]);
+      return;
+    }
+
+    const sharedCoor = getShared(attackerCoors, dfCoors);
+
+    for (const shCoor of sharedCoor) {
+      const simMap = generateEmptyDesc();
+      const buffDefendersMap = generateEmptyDesc();
+      const [simDFX, simDFY] = shCoor;
+
+      simMap[kingY][kingX] = king;
+      simMap[simDFY][simDFX] = figure[2];
+      simMap[attackerY][attackerX] = attackerF;
+
+      fillActionMap(vars.lastMoveCoor, buffDefendersMap, {
         ...vars,
-        map: mp,
-        playerTurn: +!vars.playerTurn,
+        map: simMap,
+        playerTurn: vars.playerTurn,
       });
 
-      let canDefenderEatAttacker = false;
-
-      for (const element of dfCoors) {
-        if (attackerX === element[0] && attackerY === element[1]) {
-          canDefenderEatAttacker = true;
-          break;
-        }
+      if (buffDefendersMap[kingY][kingX] === 0) {
+        defenders.push([figure, shCoor]);
       }
-
-      if (canDefenderEatAttacker) {
-        defenders.push([figure, [attackerX, attackerY]]);
-        return;
-      }
-
-      const sharedCoor = getShared(attackerCoors, dfCoors);
-
-      for (const shCoor of sharedCoor) {
-        const simMap = generateEmptyDesc();
-        const buffDefendersMap = generateEmptyDesc();
-        const [simDFX, simDFY] = shCoor;
-
-        simMap[kingY][kingX] = king;
-        simMap[simDFY][simDFX] = figure[2];
-        simMap[attackerY][attackerX] = attackerF;
-
-        fillActionMap(attacker, buffDefendersMap, {
-          ...vars,
-          map: simMap,
-          playerTurn: vars.playerTurn,
-        });
-
-        if (buffDefendersMap[kingY][kingX] === 0) {
-          defenders.push([figure, shCoor]);
-        }
-      }
-
-      defendersMap = generateEmptyDesc();
     }
   });
 
-  vars.defenders = defenders;
+  return defenders;
+}
 
-  return true;
+function canDefenderEatAttacker([attackerX, attackerY], coors) {
+  for (const element of coors) {
+    if (attackerX === element[0] && attackerY === element[1]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function updateActionMapForKingDefend([fx, fy, f], actionMap, coors, vars) {
+  const [kingX, kingY, king] = vars.kingsCoor[vars.playerTurn];
+
+  for (const [x, y] of coors) {
+    // const simMap = vars.map.map((e) => { return [...e]; });
+
+    simMap[kingY][kingX] = king;
+    simMap[fy][fx] = 0;
+    simMap[y][x] = f;
+
+    console.log(simMap);
+
+    // loopAndDo(vars.map, (j, i) => {
+    //   const ef = [j, i, vars.map[i][j]]; // e - enemy
+    //   const buffMap = generateEmptyDesc();
+
+    //   if (!isFigureCorrectToPlayer(ef[2], vars.playerTurn)) return;
+
+    //   fillActionMap(ef, buffMap, {
+    //     ...vars,
+    //     map: simMap,
+    //     playerTurn: vars.playerTurn,
+    //   });
+
+    //   console.log(buffMap);
+
+    //   if (buffMap[kingY][kingX]) {
+    //     actionMap[y][x] = 0;
+    //   }
+    // });
+
+    console.log("============================");
+  }
 }
