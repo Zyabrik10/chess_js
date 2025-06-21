@@ -1,4 +1,5 @@
 import { generateEmptyDesc } from "./utils";
+import img from "../assets/image.png";
 
 export const vars = {
   canvas: null,
@@ -15,21 +16,21 @@ export const vars = {
     [-6, -6, -6, -6, -6, -6, -6, -6],
     [-3, -4, -5, -1, -2, -5, -4, -3],
   ],
-  map: [
-    [3, 4, 5, 1, 2, 5, 4, 3],
-    [6, 6, 6, 0, 0, 0, 6, 6],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [-6, -6, -6, 0, 0, 0, -6, -6],
-    [-3, -4, -5, -1, -2, -5, -4, -3],
-  ],
+  // map: [
+  //   [3, 4, 5, 1, 2, 5, 4, 3],
+  //   [6, 6, 6, 0, 0, 0, 6, 6],
+  //   [0, 0, 0, 0, 0, 0, 0, 0],
+  //   [0, 0, 0, 0, 0, 0, 0, 0],
+  //   [0, 0, 0, 0, 0, 0, 0, 0],
+  //   [0, 0, 0, 0, 0, 0, 0, 0],
+  //   [-6, -6, -6, 0, 0, 0, -6, -6],
+  //   [-3, -4, -5, -1, -2, -5, -4, -3],
+  // ],
   map2: [1, 3, 4, 5],
   actionMap: generateEmptyDesc(),
   cellSize: 0,
   chessFiguresImage: new Image(),
-  chessFiguresImageUrl: "../assets/image.png",
+  chessFiguresImageUrl: img,
   playerTurn: 0,
   lastMoveCoor: null,
   chosenFigure: null,

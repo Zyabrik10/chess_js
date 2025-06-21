@@ -114,12 +114,12 @@ function doWhenClick({ offsetX: x, offsetY: y }) {
     vars.actionMap = generateEmptyDesc();
 
     const coors = fillActionMap(vars.chosenFigure, vars.actionMap, vars);
-    updateActionMapForKingDefend(
-      vars.chosenFigure,
-      vars.actionMap,
-      coors,
-      vars
-    );
+    // updateActionMapForKingDefend(
+    //   vars.chosenFigure,
+    //   vars.actionMap,
+    //   coors,
+    //   vars
+    // );
     return;
   }
 
@@ -360,11 +360,11 @@ function updateActionMapForKingDefend([fx, fy, f], actionMap, coors, vars) {
   for (const [x, y] of coors) {
     // const simMap = vars.map.map((e) => { return [...e]; });
 
-    simMap[kingY][kingX] = king;
-    simMap[fy][fx] = 0;
-    simMap[y][x] = f;
+    // simMap[kingY][kingX] = king;
+    // simMap[fy][fx] = 0;
+    // simMap[y][x] = f;
 
-    console.log(simMap);
+    // console.log(simMap);
 
     // loopAndDo(vars.map, (j, i) => {
     //   const ef = [j, i, vars.map[i][j]]; // e - enemy
